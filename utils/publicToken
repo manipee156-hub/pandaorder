@@ -1,0 +1,9 @@
+import jwt from "jsonwebtoken";
+
+export const generatePublicToken = (public_id) => {
+  return jwt.sign(
+    { public_id },
+    process.env.PUBLIC_SECRET,
+    { expiresIn: "24h" }
+  );
+};

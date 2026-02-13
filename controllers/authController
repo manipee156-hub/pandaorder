@@ -1,0 +1,90 @@
+const supabase = require("../db");
+const { sendVerificationEmail } = require("../services/emailService");
+const crypto = require("crypto"); // لإنشاء توكن فريد
+
+const register = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const verification_token = crypto.randomUUID();
+    const client_id = crypto.randomUUID();
+    const public_id = crypto.randomUUID(); // يولّد id فريد للتاجر
+    const { data, error } = await supabase
+      .from("users")
+      .insert([{ email, password, verification_token,client_id ,public_id}])
+      .select();
+
+    if (error) throw error;
+    
+    
+    // إرسال رابط التفعيل
+    await sendVerificationEmail(email, verification_token);
+
+    res.status(201).json({
+      message: "User registered successfully. Check your email to verify your account.",
+      user: data[0]
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) return res.status(400).send("Token missing");
+
+    const { data, error } = await supabase
+      .from("users")
+      .update({ is_verified: true })
+      .eq("verification_token", token)
+      .select();
+
+    if (error) throw error;
+    if (!data.length) return res.status(400).send("Invalid token");
+
+    res.send("Email verified successfully! You can now log in.");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+  
+};
+// LOGIN
+const login = async (req, res) => {
+  const { email, password } = req.body;
+
+  const { data: userData, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", email)
+    .single();
+
+  if (error || !userData) return res.status(401).json({ error: "Invalid credentials" });
+  if (!userData.is_verified) return res.status(401).json({ error: "Email not verified" });
+
+  const { data, error: sessionError } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (sessionError) return res.status(401).json({ error: sessionError.message });
+
+  res.json({
+    message: "Login successful",
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    user_id: data.user.id
+  });
+};
+
+
+
+module.exports = { register,verifyEmail,login };

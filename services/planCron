@@ -1,0 +1,26 @@
+const cron = require("node-cron");
+const supabase = require("../db");
+const { sendPlanExpirationEmail } = require("./emailService");
+
+cron.schedule("0 9 * * *", async () => {
+  console.log("Checking expired subscriptions...");
+
+  const { data: users, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("plan_status", "active")
+    .lt("plan_expires_at", new Date());
+
+  if (error) return console.log(error);
+
+  for (const user of users) {
+    // تحديث الحالة
+    await supabase
+      .from("users")
+      .update({ plan_status: "expired" })
+      .eq("id", user.id);
+
+    // إرسال الإيميل
+    await sendPlanExpirationEmail(user);
+  }
+});

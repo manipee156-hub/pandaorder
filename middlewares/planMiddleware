@@ -1,0 +1,18 @@
+const supabase =require ("../db");
+
+  const checkPlan = async (req, res, next) => {
+  const userId = req.user.id; // افترض أنك تستخدم authMiddleware
+  const { data: user } = await supabase
+    .from("users")
+    .select("plan, plan_expires_at")
+    .eq("id", userId)
+    .single();
+
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  if (new Date(user.plan_expires_at) <= new Date()) {
+    return res.status(403).json({ error: "Your subscription expired" });
+  }
+
+  next();
+};

@@ -1,0 +1,31 @@
+
+const express = require("express");
+require("dotenv").config();
+const app = express();
+
+const authRoutes = require("./routes/auth");
+const orderRoutes = require("./routes/orders");
+const publicRoutes = require("./routes/publicRoutes");
+const userRoutes = require("./routes/userRoutes");
+const subscriptionRoutes = require("./routes/subscription");
+const checkPlan = require("./middlewares/checkPlan");
+const authMiddleware = require("./Middleware/authMiddleware");
+const paymentRoutes = require("./routes/payment");
+const webhookRoutes = require("./routes/webhook");
+app.use(express.json());
+app.use("/auth", authRoutes);
+app.use("/orders", orderRoutes);
+app.use("/public", publicRoutes);
+app.use("/users", userRoutes);
+app.use("/subscription", subscriptionRoutes);
+app.use("/orders", authMiddleware, checkPlan, orderRoutes);
+app.use("/payment", paymentRoutes);
+app.use("/webhook", webhookRoutes);
+require("./services/planCron");
+app.get("/", (req, res) => {
+  res.send("Hello SaaS 🚀");
+});
+
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});

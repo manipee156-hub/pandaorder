@@ -1,0 +1,44 @@
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const sendVerificationEmail = async (to, token) => {
+  const verificationUrl = `http://localhost:3000/auth/verify?token=${token}`;
+
+  await resend.emails.send({
+    from: process.env.FROM_EMAIL,
+    to,
+    subject: "Confirm your account 🔐",
+    html: `
+      <h2>Account Verification</h2>
+      <p>Click the link below to verify your account:</p>
+      <a href="${verificationUrl}">Verify My Account</a>
+    `
+  });
+};
+const sendOrderEmail = async (to, order) => {
+  await resend.emails.send({
+    from: process.env.FROM_EMAIL,
+    to,
+    subject: "📦 New Order Received",
+    html: `
+      <h2>New Order Details</h2>
+      <p><strong>Customer Name:</strong> ${order.customer_name}</p>
+      <p><strong>Phone:</strong> ${order.phone}</p>
+      <p><strong>Address:</strong> ${order.address}</p>
+      <p><strong>Product:</strong> ${order.product}</p>
+    `
+  });
+};
+const sendPlanExpirationEmail = async (user) => {
+  await resend.emails.send({
+    from: process.env.FROM_EMAIL,
+    to: user.email,
+    subject: "⚠ Your subscription has expired",
+    html: `
+      <h2>Subscription Expired</h2>
+      <p>Your PandaOrder subscription has expired.</p>
+      <p>Please renew your subscription to continue using the platform.</p>
+    `
+  });
+};
+module.exports = { sendOrderEmail,sendVerificationEmail,sendPlanExpirationEmail };

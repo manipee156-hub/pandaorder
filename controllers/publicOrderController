@@ -1,0 +1,90 @@
+// controllers/publicOrderController.js
+const supabase = require("../db");
+const { sendOrderEmail } = require("../services/emailService");
+
+const createPublicOrder = async (req, res) => {
+  try {
+    const { public_id } = req.params;
+    const { name, phone, address, product, bot } = req.body;
+
+    // 🕳 1️⃣ Honeypot
+    if (bot) {
+      return res.status(400).json({ error: "Spam detected" });
+    }
+
+    // ✅ 2️⃣ Validation
+    if (!name || name.length < 2) {
+      return res.status(400).json({ error: "اسم غير صالح" });
+    }
+
+    if (!phone || phone.length < 8) {
+      return res.status(400).json({ error: "هاتف غير صالح" });
+    }
+
+    if (!address || address.length < 5) {
+      return res.status(400).json({ error: "عنوان غير صالح" });
+    }
+
+    // 🔍 3️⃣ جلب التاجر
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id, email")
+      .eq("public_id", public_id)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: "Invalid link" });
+    }
+
+    // 🧬 4️⃣ Fingerprint
+    const fingerprint = req.ip + "-" + req.headers["user-agent"];
+
+    // 🔁 5️⃣ Duplicate Check
+    const { data: existing } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("client_id", user.id)
+      .eq("phone", phone)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({
+        error: "تم إرسال طلب بهذا الرقم مسبقًا",
+      });
+    }
+
+    // 📝 6️⃣ إنشاء الطلب
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert([{
+        client_id: user.id,
+        customer_name: name,
+        phone,
+        address,
+        product,
+        fingerprint,
+      }])
+      .select();
+
+    if (orderError) throw orderError;
+
+    // 📧 7️⃣ إرسال إيميل للتاجر
+    await sendOrderEmail(user.email, {
+      name,
+      phone,
+      address,
+      product,
+    });
+
+    res.json({
+      message: "تم إرسال الطلب بنجاح ✅",
+      order: order[0],
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { createPublicOrder };

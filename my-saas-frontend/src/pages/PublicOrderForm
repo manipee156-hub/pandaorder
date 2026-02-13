@@ -1,0 +1,40 @@
+import { useParams } from "react-router-dom";
+import { useState } from "react";
+
+function PublicOrderForm() {
+  const { public_id } = useParams();
+
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    product: "",
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    await fetch(`http://localhost:3000/public/order/${public_id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    alert("تم إرسال الطلب ✅");
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>Buy Now</h2>
+
+      <input placeholder="Name"onChange={e => setForm({...form, name:e.target.value})} />
+      <input placeholder="Phone" onChange={e => setForm({...form, phone:e.target.value})} />
+      <input placeholder="Adress" onChange={e => setForm({...form, address:e.target.value})} />
+      <input placeholder="Product" onChange={e => setForm({...form, product:e.target.value})} />
+
+      <button>Submit</button>
+    </form>
+  );
+}
+
+export default PublicOrderForm;

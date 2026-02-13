@@ -1,0 +1,21 @@
+import jwt from "jsonwebtoken";
+
+export const verifyPublicToken = (req, res, next) => {
+  const token = req.headers["x-public-token"];
+
+  if (!token) {
+    return res.status(401).json({ error: "Token مفقود" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.PUBLIC_SECRET);
+
+    if (decoded.public_id !== req.params.public_id) {
+      return res.status(401).json({ error: "Token غير صالح" });
+    }
+
+    next();
+  } catch {
+    return res.status(401).json({ error: "Token منتهي أو خاطئ" });
+  }
+};

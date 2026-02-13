@@ -1,0 +1,30 @@
+const fetch = require("node-fetch");
+
+const createCheckoutLink = async (email) => {
+  const API_KEY = process.env.LEMON_SQUEEZY_API_KEY;
+  const PRODUCT_ID = process.env.LEMON_PRODUCT_ID;
+
+  const res = await fetch("https://api.lemonsqueezy.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      data: {
+        type: "checkout_session",
+        attributes: {
+          variant_id: PRODUCT_ID,
+          billing_email: email,
+          success_url: `${process.env.CLIENT_URL}/success`,
+          cancel_url: `${process.env.CLIENT_URL}/pricing`,
+        },
+      },
+    }),
+  });
+
+  const json = await res.json();
+  return json.data.attributes.url;
+};
+
+module.exports = { createCheckoutLink };

@@ -1,0 +1,12 @@
+const express = require("express");
+const router = express.Router();
+const { createCheckoutLink } = require("../services/lemonsqueezyService");
+const authMiddleware = require("../middlewares/authMiddleware");
+
+router.post("/lemonsqueezy", authMiddleware, async (req, res) => {
+  const { email } = req.user;
+  const url = await createCheckoutLink(email);
+  res.json({ url });
+});
+
+module.exports = router;

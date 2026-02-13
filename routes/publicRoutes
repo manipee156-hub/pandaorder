@@ -1,0 +1,13 @@
+const express = require("express");
+const router = express.Router();
+
+const { createPublicOrder } = require("../controllers/publicOrderController");
+const { orderLimiter } = require("../middlewares/rateLimiter");
+
+router.post(
+  "/order/:public_id",
+  orderLimiter, // 🛡️ حماية
+  createPublicOrder
+);
+
+module.exports = router;
