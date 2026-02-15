@@ -1,4 +1,4 @@
-const fetch = require("node-fetch");
+
 
 const createCheckoutLink = async (email) => {
   const API_KEY = process.env.LEMON_SQUEEZY_API_KEY;
@@ -27,4 +27,4 @@ const createCheckoutLink = async (email) => {
   return json.data.attributes.url;
 };
 
-module.exports = { createCheckoutLink };
+module.exports =  createCheckoutLink ;

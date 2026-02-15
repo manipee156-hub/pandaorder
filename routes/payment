@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { createCheckoutLink } = require("../services/lemonsqueezyService");
-const authMiddleware = require("../middlewares/authMiddleware");
+const  createCheckoutLink = require("../services/lemonsqueezyService");
+const authMiddleware = require("../Middleware/authMiddleware");
 
 router.post("/lemonsqueezy", authMiddleware, async (req, res) => {
   const { email } = req.user;
