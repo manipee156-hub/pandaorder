@@ -3,33 +3,67 @@ const router = express.Router();
 const supabase = require("../db");
 const crypto = require("crypto");
 
-// تحقق من توقيع webhook إذا رغبت (Optional)
+router.post(
+  "/lemonsqueezy",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const secret = process.env.LEMON_WEBHOOK_SECRET;
+      const signature = req.headers["x-signature"];
 
-router.post("/lemonsqueezy", express.json(), async (req, res) => {
-  try {
-    const event = req.body;
+      const hmac = crypto.createHmac("sha256", secret);
+      const digest = Buffer.from(
+        hmac.update(req.body).digest("hex"),
+        "utf8"
+      );
 
-    // تأكد من نوع الحدث
-    if (event.type === "checkout_session.completed") {
-      const email = event.data.attributes.billing_email;
+      const checksum = Buffer.from(signature, "utf8");
 
-      await supabase
-        .from("users")
-        .update({
-          plan: "monthly",
-          plan_status: "active",
-          plan_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        })
-        .eq("email", email);
+      if (!checksum || !crypto.timingSafeEqual(digest, checksum)) {
+        console.log("Invalid signature ❌");
+        return res.status(401).json({ error: "Invalid signature" });
+      }
 
-      console.log("Subscription activated for:", email);
+      const event = JSON.parse(req.body.toString());
+      const eventName = event.meta?.event_name;
+      const attributes = event.data?.attributes;
+
+      if (!attributes) {
+        return res.status(200).json({ received: true });
+      }
+
+      const email = attributes.user_email;
+
+      if (eventName === "subscription_created") {
+        await supabase
+          .from("users")
+          .update({
+            plan: "monthly",
+            plan_status: "active",
+            plan_expires_at: attributes.renews_at,
+          })
+          .eq("email", email);
+
+        console.log("Subscription created:", email);
+      }
+
+      if (eventName === "subscription_cancelled") {
+        await supabase
+          .from("users")
+          .update({
+            plan_status: "cancelled",
+          })
+          .eq("email", email);
+
+        console.log("Subscription cancelled:", email);
+      }
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Webhook error:", error);
+      res.status(500).json({ message: "Webhook error" });
     }
-
-    res.status(200).json({ received: true });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Webhook error" });
   }
-});
+);
 
 module.exports = router;

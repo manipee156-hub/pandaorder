@@ -1,0 +1,49 @@
+// services/subscriptionService.js
+const supabase = require("../lib/supabase.js");
+
+async function updateUserSubscription(email, data) {
+  const { error } = await supabase
+    .from("users")
+    .update({
+      plan_status: data.status, // active / cancelled
+      plan_expires_at: data.renewsAt || null
+    })
+    .eq("email", email);
+
+  if (error) {
+    console.error("Supabase error:", error);
+  } else {
+    console.log("User updated:", email, data);
+  }
+}
+
+async function handleEvent(event) {
+  const eventName = event.meta.event_name;
+  const subscription = event.data?.attributes;
+
+  if (!subscription) return;
+
+  const userEmail = subscription.user_email;
+
+  if (eventName === "subscription_created") {
+    await updateUserSubscription(userEmail, {
+      status: "active",
+      renewsAt: subscription.renews_at
+    });
+  }
+
+  if (eventName === "subscription_payment_success") {
+    await updateUserSubscription(userEmail, {
+      status: "active",
+      renewsAt: subscription.renews_at
+    });
+  }
+
+  if (eventName === "subscription_cancelled") {
+    await updateUserSubscription(userEmail, {
+      status: "cancelled"
+    });
+  }
+}
+
+module.exports = { handleEvent };
